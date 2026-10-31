@@ -2,6 +2,20 @@
 
 > Unlisted prototype. Not announced; pages ask search engines not to index them. Public repos and sites remain reachable by anyone with the link.
 
+## [▶ Launch the viewer](https://pbasran.github.io/OpenLearnV3/)
+
+[![Launch viewer](https://img.shields.io/badge/Launch-OpenLearn%20v3%20viewer-1f6f78?style=for-the-badge)](https://pbasran.github.io/OpenLearnV3/)
+[![Linear accelerator](https://img.shields.io/badge/Open-Linear%20accelerator-2a8a95?style=for-the-badge)](https://pbasran.github.io/OpenLearnV3/)
+[![CT scanner](https://img.shields.io/badge/Open-CT%20scanner-2a8a95?style=for-the-badge)](https://pbasran.github.io/OpenLearnV3/?mode=ct)
+[![iPad life-size AR](https://img.shields.io/badge/iPad-Life--size%20AR-555?style=for-the-badge)](https://pbasran.github.io/OpenLearnV3/ar/)
+
+Direct links: [**Linear accelerator**](https://pbasran.github.io/OpenLearnV3/) · [**CT scanner**](https://pbasran.github.io/OpenLearnV3/?mode=ct) · [**iPad AR page**](https://pbasran.github.io/OpenLearnV3/ar/)
+
+<img src="docs/OpenLearnV3_QR.png" alt="QR code to the OpenLearn v3 viewer" width="220"> <img src="docs/OpenLearnV3_CT_QR.png" alt="QR code to the CT scanner" width="220">
+
+Scan with a phone or tablet camera (left: linac, right: CT scanner). Press **✋ Gesture** to control the machine with your hand. For augmented reality use Chrome on an ARCore-capable Android phone and tap **AR**; on iPad/iPhone use the iPad AR page.
+
+
 A separate repository built from [OpenLearn v2](https://github.com/pbasran/OpenLearnV2). **It does not modify or replace the deployed, IRB-approved v1 apps or v2.** Any use with learners as part of a study needs its own review.
 
 **New in v3: Gesture mode.** Press **✋ Gesture** (top bar). The device camera tracks one hand; the same screen shows the 3D machine and updates as you move.
