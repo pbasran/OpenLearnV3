@@ -46,4 +46,4 @@ if (current === 'linac') for (const [k, v] of q) if (window.lin && k in lin.axes
 if (current === 'ct') for (const [k, v] of q) if (window.ct && k in ct.axes) ct.axes[k].val = ct.axes[k].tgt = +v;
 window.AR = setupAR(stage, ui, () => mods[current]);
 window.GESTURE = setupGestures(stage, ui, () => mods[current], () => current);
-window.ready = true;
+window.ready = true; window.__bootOk && window.__bootOk();

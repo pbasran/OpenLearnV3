@@ -5,6 +5,14 @@
 <meta name="theme-color" content="#1a6e78">
 <meta name="robots" content="noindex, nofollow, noarchive">
 </head><body>
+<div id="boot" style="font:14px system-ui,sans-serif;padding:16px;color:#12262b">Loading OpenLearn v3…</div>
+<script>
+// visible diagnostics: if the app fails to start, show why instead of a blank page
+(function(){var b=document.getElementById('boot');function show(m){if(!b)return;b.style.color='#b00020';b.style.whiteSpace='pre-wrap';b.textContent='OpenLearn v3 failed to start:\n'+m+'\n\nBrowser: '+navigator.userAgent;}
+window.addEventListener('error',function(e){show((e.message||'error')+(e.filename?'\n'+e.filename+':'+e.lineno:''));},true);
+window.addEventListener('unhandledrejection',function(e){show('Promise rejected: '+(e.reason&&(e.reason.stack||e.reason.message)||e.reason));});
+window.__bootOk=function(){if(b)b.remove();b=null;};})();
+</script>
 <div id="stage"></div><div id="ui"></div>
 <script type="module" src="/src/main.js"></script>
 </body></html>
