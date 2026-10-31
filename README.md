@@ -1,5 +1,7 @@
 # OpenLearn v3 — gesture-controlled CT scanner & linear accelerator (prototype)
 
+> Unlisted prototype. Not announced; pages ask search engines not to index them. Public repos and sites remain reachable by anyone with the link.
+
 A separate repository built from [OpenLearn v2](https://github.com/pbasran/OpenLearnV2). **It does not modify or replace the deployed, IRB-approved v1 apps or v2.** Any use with learners as part of a study needs its own review.
 
 **New in v3: Gesture mode.** Press **✋ Gesture** (top bar). The device camera tracks one hand; the same screen shows the 3D machine and updates as you move.
