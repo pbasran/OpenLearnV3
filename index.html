@@ -9,7 +9,7 @@
 <script>
 // visible diagnostics: if the app fails to start, show why instead of a blank page
 (function(){var b=document.getElementById('boot');function show(m){if(!b)return;b.style.color='#b00020';b.style.whiteSpace='pre-wrap';b.textContent='OpenLearn v3 failed to start:\n'+m+'\n\nBrowser: '+navigator.userAgent;}
-window.addEventListener('error',function(e){show((e.message||'error')+(e.filename?'\n'+e.filename+':'+e.lineno:''));},true);
+window.addEventListener('error',function(e){var tg=e.target;if(tg&&tg!==window&&(tg.src||tg.href)){show('Failed to load file: '+(tg.src||tg.href)+' ('+tg.tagName+')');return;}show((e.message||'error')+(e.filename?'\n'+e.filename+':'+e.lineno+':'+e.colno:'')+(e.error&&e.error.stack?'\n'+e.error.stack:''));},true);
 window.addEventListener('unhandledrejection',function(e){show('Promise rejected: '+(e.reason&&(e.reason.stack||e.reason.message)||e.reason));});
 window.__bootOk=function(){if(b)b.remove();b=null;};})();
 </script>
