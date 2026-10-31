@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>OpenLearn v2 – Life-size AR (iPad)</title>
+<meta name="theme-color" content="#1a6e78">
+<style>
+:root{--bg:#f4f7f8;--card:#fff;--ink:#12262b;--mut:#51666c;--acc:#1a6e78;--line:#d5e0e3}
+@media (prefers-color-scheme:dark){:root{--bg:#10191c;--card:#18262a;--ink:#e7f0f2;--mut:#9db2b8;--acc:#4fc3d1;--line:#2a3d42}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,system-ui,Segoe UI,sans-serif;padding:24px 16px 48px}
+main{max-width:860px;margin:0 auto}h1{font-size:1.5rem;margin:0 0 4px}p.lead{color:var(--mut);margin:0 0 20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+a.card{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;color:inherit;text-decoration:none}
+a.card img{display:block;width:100%;height:190px;object-fit:contain;background:#dedede}
+.t{padding:12px 14px}.t b{display:block}.t span{color:var(--mut);font-size:.9rem}
+h2{font-size:1.05rem;margin:26px 0 6px}ol,ul{padding-left:20px;margin:6px 0}li{margin:3px 0}
+.note{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--mut);font-size:.92rem}
+#warn{display:none;border-left:4px solid #c2410c;margin-bottom:16px}
+</style></head><body><main>
+<h1>Life-size AR on iPad</h1>
+<p class="lead">Place the CT scanner or the linac in a real room and walk around it at true size. Equipment shown is a teaching model, not a specific vendor’s product.</p>
+<div class="note" id="warn">This page is for iPad and iPhone (Safari). Android users: open the <a href="../">main viewer</a> in Chrome and tap <b>AR</b>.</div>
+<div class="grid">
+<a class="card" rel="ar" href="linac_gantry0_couch_in.usdz#allowsContentScaling=0"><img src="linac_gantry0_couch_in.jpg" alt="Linac, gantry at 0 degrees"><div class="t"><b>Linac – gantry 0°</b><span>Head over the couch. About 4 m long incl. couch.</span></div></a>
+<a class="card" rel="ar" href="linac_gantry90.usdz#allowsContentScaling=0"><img src="linac_gantry90.jpg" alt="Linac, gantry at 90 degrees"><div class="t"><b>Linac – gantry 90°</b><span>Lateral beam position; shows the gantry’s swing radius.</span></div></a>
+<a class="card" rel="ar" href="ct_table_in.usdz#allowsContentScaling=0"><img src="ct_table_in.jpg" alt="CT scanner, table in"><div class="t"><b>CT – table in</b><span>Couch advanced into the bore with the phantom.</span></div></a>
+<a class="card" rel="ar" href="ct_table_out.usdz#allowsContentScaling=0"><img src="ct_table_out.jpg" alt="CT scanner, table out"><div class="t"><b>CT – table out</b><span>Loading position.</span></div></a>
+</div>
+<h2>How to use</h2>
+<ol><li>Open this page in <b>Safari</b> on an iPad (iPadOS 13 or later; LiDAR is not required).</li>
+<li>Tap a card. The AR viewer opens; slowly move the iPad so it finds the floor.</li>
+<li>Drag to position it, rotate with two fingers, and walk around it. Clear about 5 × 4 m for the linac and 4 × 3 m for the CT.</li>
+<li>Models are locked to life-size (1 unit = 1 m) so people can judge real scale. Use the on-screen share button to take a photo.</li></ol>
+<h2>Limits</h2>
+<ul><li>These are static poses: the gantry, couch and beam cannot be moved in this viewer. Use the <a href="../">interactive 3D viewer</a> for that.</li>
+<li>The treatment room, console, beam and X-ray animations are left out so the equipment itself is easy to see.</li>
+<li>Educational model only; dimensions are representative, not a vendor specification.</li></ul>
+</main>
+<script>if(!/iPad|iPhone|Macintosh/.test(navigator.userAgent)||!document.createElement('a').relList.supports('ar'))document.getElementById('warn').style.display='block'</script>
+</body></html>
