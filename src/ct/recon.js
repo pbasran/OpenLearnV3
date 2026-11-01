@@ -123,7 +123,7 @@ export function scout(view, kvp, topRel = 0, dx = 0, mAs = 40, seed = 3) {
   for (let si = 0; si < nS; si++) {
     const s = (si + 0.5) * (PHANTOM_LEN / nS), sec = sectionAt(s), ell = buildEllipses(sec, kvp, dx, topRel + sec.ell[0][3], {cx: 0, cy: topRel - 0.9, a: 22, b: 0.9});
     for (let ui = 0; ui < nU; ui++) {
-      const u = (ui - nU / 2 + 0.5) * du; let line = 0;
+      const u = -(ui - nU / 2 + 0.5) * du; let line = 0;   // image rows run downward, so negate: patient-left (AP) / anterior (lateral) at the top, table at the bottom
       for (const e of ell) {
         if (view === 'ap') { const t = (u - e.cx) / e.a; if (Math.abs(t) < 1) line += e.d * 2 * e.b * Math.sqrt(1 - t * t); }
         else { const t = (u - e.cy) / e.b; if (Math.abs(t) < 1) line += e.d * 2 * e.a * Math.sqrt(1 - t * t); }

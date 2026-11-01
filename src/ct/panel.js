@@ -40,11 +40,13 @@ export function buildCTPanels(stage, ct, ui) {
       ui.note(g3, 'Tolerance ±2 mm. Red laser lines are drawn where they cross the phantom and table. Raise or lower the table until the side marks sit on the horizontal laser.');
       const g4 = ui.group(p, 'Gantry');
       let tiltSl = null;
-      sync.tilt = (() => { const s = ui.slider(g4, {go: true, label: 'Gantry tilt', min: -30, max: 30, step: 0.5, value: 0, unit: '°', onInput: (v) => { axes.tilt.tgt = v; }}); tiltSl = s; return () => s.set(axes.tilt.tgt); })();
+      sync.tilt = (() => { const s = ui.slider(g4, {go: true, label: 'Gantry tilt (+ = top leans toward the patient’s head)', min: -30, max: 30, step: 0.5, value: 0, unit: '°', onInput: (v) => { axes.tilt.tgt = v; }}); tiltSl = s; return () => s.set(axes.tilt.tgt); })();
       // tilt is rarely used in radiation oncology simulation: locked (and held at 0°) by default
       S.tiltLock = true; tiltSl.disabled(true);
       refs.tiltLock = ui.toggle(g4, {label: 'Lock gantry tilt at 0° (typical for RadOnc)', value: true, onChange: (v) => { S.tiltLock = v; tiltSl.disabled(v); if (v) { axes.tilt.tgt = 0; tiltSl.set(0); } ui.toast(v ? 'Tilt locked at 0°' : 'Tilt unlocked', 'ok'); }});
       ui.note(g4, 'Tilt keeps the scan plane perpendicular to the anatomy (and avoids eyes in head CT). Tilt is blocked if the table or phantom would touch the bore.');
+      const gC = ui.group(p, 'Coordinate system (DICOM patient)', false);
+      ui.note(gC, 'CT scanners use the <b>DICOM patient coordinate system</b> (IEC 61217 is the radiotherapy-machine standard and is used on the Linac tab). The phantom lies <b>head-first, supine</b> (HFS). <b>x</b> increases toward the patient’s <b>left</b>, <b>y</b> toward the <b>posterior</b>, <b>z</b> toward the <b>head</b> (right-handed). Table <b>in</b> = toward the gantry; height is +up.<br>Images follow the radiological display: viewed from the patient’s feet, <b>patient right on the left of the picture</b>, anterior up (R/L/A/P letters are drawn on every image). Scouts are shown head-left: an AP scout has the patient’s left at the top; a lateral scout has anterior at the top and the table at the bottom. Slice positions are measured in cm from the head end (DICOM z decreases along that direction).<br>Gantry tilt is a nominal angle; here + leans the top of the gantry toward the patient’s head.');
       ui.toggle(g4, {label: 'Animate electrons & photons in the x-ray tube', value: true, onChange: (v) => { S.tubeAnim = v; }});
       refs.cover = ui.slider(g4, {label: 'Gantry cover (solid ↔ x-ray)', min: 0, max: 1, step: 0.05, value: 1, fmt: (v) => Math.round(v * 100) + '%', onInput: (v) => { S.coverOpacity = v; }});
       ui.button(g4, 'See the rotating tube', () => { S.coverOpacity = 0.12; refs.cover.set(0.12); ct.flyTo(ct.presets.front.target, ct.presets.front.cam); }, 'ghost');
@@ -130,6 +132,7 @@ export function buildCTPanels(stage, ct, ui) {
     g.imageSmoothingEnabled = true; g.drawImage(ct.scoutCanvas(S.scoutDone.img), 0, 0, w, h);
     const x0 = (S.range[0] / PHANTOM_LEN) * w, x1 = (S.range[1] / PHANTOM_LEN) * w; g.fillStyle = 'rgba(255,211,77,.12)'; g.fillRect(x0, 0, x1 - x0, h); g.strokeStyle = '#ffd34d'; g.lineWidth = 2; g.strokeRect(x0, 1, x1 - x0, h - 2);
     g.fillStyle = '#9fd3dc'; g.font = `${11 * dpr}px system-ui`; g.textAlign = 'left'; g.fillText(S.scoutDone.view === 'ap' ? 'AP scout' : 'Lateral scout', 6, 14 * dpr * 0.8);
+    g.fillStyle = '#ffd34d'; g.textAlign = 'right'; g.fillText('FEET →', w - 6, h * 0.5); g.textAlign = 'left'; g.fillText('← HEAD', 6, h * 0.5 + 12 * dpr); g.textAlign = 'center'; g.fillText(S.scoutDone.view === 'ap' ? 'L (patient left)' : 'A (anterior)', w * 0.5, 14 * dpr * 0.8); g.fillText(S.scoutDone.view === 'ap' ? 'R (patient right)' : 'P (posterior / table)', w * 0.5, h - 6);
     SECTIONS.forEach((s) => { const x = (s.s0 / PHANTOM_LEN) * w; g.strokeStyle = 'rgba(255,255,255,.25)'; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); g.setLineDash([]); g.fillStyle = 'rgba(255,255,255,.65)'; g.fillText(s.name.slice(7, 8), x + 6, h - 8); });
   }
 
