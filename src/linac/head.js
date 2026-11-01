@@ -14,7 +14,7 @@ export class Head {
     this.yMLC = 1.4025; this.hMLC = 0.0745; this.leafLen = 0.11;
     this.dMLC = this.src.y - this.yMLC;
     this.lastVersion = -1;
-    this._buildJaws(); this._buildMLC(); this._buildBeam(); this._buildFieldLight();
+    this._buildJaws(); this._buildMLC(); this._buildBeam(); this._buildFieldLight(); this._buildEnvelope();
   }
 
   /* ---------- jaws ---------- */
@@ -137,6 +137,17 @@ export class Head {
     }
     if (collYWorld) this.light.shadow.camera.up.copy(collYWorld);
   }
+  /** Thin transparent ring marking the real physical envelope of the collimator (jaws + MLC): the part of the head that can strike the couch or patient. */
+  _buildEnvelope() {
+    const R = 0.27, y0 = 1.36, y1 = 1.66;
+    this.ringMat = new THREE.MeshBasicMaterial({color: 0xffb020, transparent: true, opacity: 0.10, side: THREE.DoubleSide, depthWrite: false, toneMapped: false});
+    this.ringEdgeMat = new THREE.MeshBasicMaterial({color: 0xffb020, transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false});
+    this.ring = new THREE.Group(); this.ring.name = 'head_envelope'; this.ring.position.set(this.isoX, 0, 0);
+    const wall = new THREE.Mesh(new THREE.CylinderGeometry(R, R, y1 - y0, 64, 1, true), this.ringMat); wall.position.y = (y0 + y1) / 2; wall.renderOrder = 6; this.ring.add(wall);
+    for (const y of [y0, y1]) { const t = new THREE.Mesh(new THREE.TorusGeometry(R, 0.0025, 8, 96), this.ringEdgeMat); t.rotation.x = Math.PI / 2; t.position.y = y; t.renderOrder = 6; this.ring.add(t); }
+    this.group.add(this.ring);
+  }
+  setEnvelope(visible, hot) { this.ring.visible = !!visible; const c = hot ? 0xff3030 : 0xffb020; this.ringMat.color.setHex(c); this.ringEdgeMat.color.setHex(c); this.ringMat.opacity = hot ? 0.28 : 0.10; }
   setBeam({visible, intensity = 1}) { this.beam.visible = !!visible; this.beamMat.opacity = intensity; }
   setFieldLight(on) { this.light.visible = on; }
 }

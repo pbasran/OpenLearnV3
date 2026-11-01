@@ -169,7 +169,7 @@ export async function createLinac(stage) {
   const S = {
     timeScale: 4, energy: 6, fff: false, mu: 100, delivered: 0, beamOn: false, doorOpen: true, fieldLight: true, lasers: true,
     beamVis: true, doseView: false, slicePlane: 'axial', coverOpacity: 1, kvOut: 0, kvTarget: 0, mvOut: 0, mvTarget: 0, status: 'READY', alerts: [], dirty: true,
-    interlock: true, clearance: 0.04, selected: null, eAnim: true, cmdLog: [],
+    interlock: true, envelope: true, hotUntil: 0, clearance: 0.04, selected: null, eAnim: true, cmdLog: [],
   };
 
   // --- collision geometry ---
@@ -273,7 +273,8 @@ export async function createLinac(stage) {
     for (const c of covers) c.castShadow = S.coverOpacity > 0.5;
     world.updateMatrixWorld(true);
     const yAxis = new T.Vector3(1, 0, 0).transformDirection(collInner.matrixWorld); // IEC-Y (world +x at coll 0)
-    head.update(yAxis);
+    if (hit) S.hotUntil = performance.now() + 1500;
+    head.update(yAxis); head.setEnvelope(S.envelope && !stage.renderer.xr.isPresenting, performance.now() < S.hotUntil);
     head.setBeam({visible: S.beamVis && (S.beamOn || S.beamPreview), intensity: S.beamOn ? 1 : 0.55});
     head.setFieldLight(S.fieldLight && !S.beamOn);
     couch.updateLasers(S.lasers);

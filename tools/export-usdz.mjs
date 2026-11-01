@@ -19,7 +19,7 @@ for (const [mode, list] of Object.entries(POSES)) for (const [name, qs] of list)
     const T = await import('/node_modules/three/build/three.module.js'); // same instance as app (vite dedupes)
     const {USDZExporter} = await import('/node_modules/three/examples/jsm/exporters/USDZExporter.js');
     const m = window.mode === 'ct' ? window.ct : window.lin;
-    m.S.interlock = false; for (const [k, v] of new URLSearchParams(qs)) if (m.axes[k]) { m.axes[k].val = +v + 1e-3; m.axes[k].tgt = +v; }   // force applyAxes via a tiny offset
+    m.S.interlock = false; m.S.envelope = false; for (const [k, v] of new URLSearchParams(qs)) if (m.axes[k]) { m.axes[k].val = +v + 1e-3; m.axes[k].tgt = +v; }   // force applyAxes via a tiny offset
     for (let i = 0; i < 400; i++) m.update(0.05);                       // settle animated axes
     const mod = window.mode;
     const hide = mod === 'ct' ? [m.room, m.monitor, ...['control_console', 'image_reconstruction_computer', 'safety_and_intercom_systems', 'cooling_system', 'laser_positioning_lights'].flatMap((id) => (m.registry.get(id) || []))] : [m.room.group];

@@ -7,7 +7,7 @@ const T = {pinchOn: 0.28, pinchOff: 0.42, fistFrames: 4, lostMs: 350, dead: 0.01
 
 // Per-mode control chips: [axis key, label, span in axis units covered by sweeping the full width of the preview, unit, invert]
 const CONTROLS = {
-  linac: [['gantry', 'Gantry', 360, '°'], ['coll', 'Collimator', 350, '°'], ['couchVrt', 'Couch height', 0.8, ' m'], ['couchLng', 'Couch in/out', 1.75, ' m'], ['couchLat', 'Couch lateral', 0.5, ' m'], ['couchRot', 'Couch rotation', 190, '°']],
+  linac: [['gantry', 'Gantry', 360, '°'], ['coll', 'Collimator', 350, '°'], ['couchVrt', 'Couch height', 0.8, ' m'], ['couchLng', 'Couch in/out', 1.75, ' m', true], ['couchLat', 'Couch lateral', 0.5, ' m'], ['couchRot', 'Couch rotation', 190, '°']],
   ct: [['tableIn', 'Table in/out', 1.5, ' m'], ['tableH', 'Table height', 0.68, ' m'], ['tilt', 'Gantry tilt', 60, '°']],
 };
 
@@ -76,9 +76,9 @@ export function setupGestures(stage, ui, getModule, getMode) {
 
   function buildChips() {
     chips.innerHTML = ''; const mode = getMode(); const list = CONTROLS[mode] || [];
-    list.forEach(([key, label, span, unit], i) => {
+    list.forEach(([key, label, span, unit, inv], i) => {
       const b = document.createElement('button'); b.textContent = label;
-      b.onclick = () => { [...chips.children].forEach((x) => x.classList.remove('on')); b.classList.add('on'); G.logic.select(key, [key, label, span, unit]); };
+      b.onclick = () => { [...chips.children].forEach((x) => x.classList.remove('on')); b.classList.add('on'); G.logic.select(key, [key, label, span, unit, inv]); };
       chips.append(b); if (i === 0) b.click();
     });
   }

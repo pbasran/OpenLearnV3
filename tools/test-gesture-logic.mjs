@@ -35,6 +35,11 @@ const res = await pg.evaluate(async () => {
   for (let i = 0; i < 5; i++) step(hand({pinch: true, x: 0.4})); for (let i = 0; i < 10; i++) step(hand({pinch: true, x: 0.5}));
   A.gantry.val = 5; t += 600; g.feed(null, t); t += 100; g.feed(null, t); ck('hand lost mid-drag stops motion', A.gantry.tgt === 5 && ev.includes('lost'), 'tgt=' + A.gantry.tgt);
   const n = ev.filter((e) => e === 'stop').length; step(hand({fist: true})); step(hand({x: 0.5})); ck('single fist frame ignored', ev.filter((e) => e === 'stop').length === n);
+  // couch in/out: hand moving right must move the couch right on screen (= in, toward the stand) => couchLng target goes DOWN (IEC + = out in this model)
+  { const B = {couchLng: {min: -0.8, max: 0.95, val: 0, tgt: 0}}; const g2 = createGestureLogic(() => B, () => {}); g2.select('couchLng', ['couchLng', 'Couch in/out', 1.75, ' m', true]);
+    let t2 = 5000; const st2 = (h) => { t2 += 33; return g2.feed(h, t2); };
+    for (let i = 0; i < 5; i++) st2(hand({pinch: true, x: 0.4})); for (let i = 0; i < 30; i++) st2(hand({pinch: true, x: 0.4 + 0.1 * Math.min(1, i / 10)}));
+    ck('couch in/out: hand right moves couch IN (target decreases)', B.couchLng.tgt < -0.1, 'tgt=' + B.couchLng.tgt.toFixed(3)); }
   return out.join('\n');
 });
 console.log(res); console.log('page errors:', errs.length ? errs : 'none'); await br.close();

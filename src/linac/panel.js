@@ -49,7 +49,8 @@ export function buildLinacPanels(stage, lin, ui) {
       const fl = ui.slider(g3, {label: 'Field length Y', min: 1, max: 40, step: 0.5, value: 10, unit: ' cm', onInput: (v) => { const c = (ap.jaw.y1 + ap.jaw.y2) / 2; ap.setRect(ap.jaw.x2 - ap.jaw.x1, v, (ap.jaw.x1 + ap.jaw.x2) / 2, c); refs.fl = v; }});
       refs.fwS = fw; refs.flS = fl;
       ui.segmented(g3, {label: 'MLC shape', options: [['rect', 'Open'], ['circle', 'Circle'], ['ellipse', 'Ellipse'], ['lshape', 'L'], ['blob', 'Blob']], value: 'rect', onChange: (v) => { ap.shape(v); const st = ap.stats(); fw.set(st.fx); fl.set(st.fy); }});
-      ui.note(g3, '60 leaf pairs: 40 × 0.5 cm central, 20 × 1.0 cm outer (projected at isocentre). Jaws sit above the MLC and trim the field.');
+      ui.button(g3, 'Max field 40 × 40 cm', () => { ap.setRect(40, 40); fw.set(40); fl.set(40); }, 'ghost');
+      ui.note(g3, '60 leaf pairs: 40 × 0.5 cm central, 20 × 1.0 cm outer (projected at isocentre); the MLC and jaws open to a full 40 × 40 cm field. Jaws sit above the MLC and trim the field.');
       const g4 = ui.group(p, 'Beam');
       // FFF is just another beam selection: each of the four choices uses one slot of the 4-position filter carousel
       const eSel = (v) => (S.fff ? 'F' : S.energy);
@@ -68,6 +69,7 @@ export function buildLinacPanels(stage, lin, ui) {
       ui.segmented(g5, {label: 'Motion speed', options: [[1, '1×'], [4, '4×'], [10, '10×']], value: S.timeScale, onChange: (v) => { S.timeScale = +v; }});
       const g6 = ui.group(p, 'Display', false);
       refs.covers = ui.slider(g6, {label: 'Covers (solid ↔ x-ray)', min: 0, max: 1, step: 0.05, value: 1, fmt: (v) => Math.round(v * 100) + '%', onInput: (v) => { S.coverOpacity = v; if (v > 0.3 && S.selected) lin.selectPart(null); }});
+      ui.toggle(g6, {label: 'Head envelope ring (collision zone)', value: true, onChange: (v) => { S.envelope = v; }});
       ui.toggle(g6, {label: 'Light field', value: true, onChange: (v) => { S.fieldLight = v; }});
       ui.toggle(g6, {label: 'Show radiation beam (teaching aid)', value: true, onChange: (v) => { S.beamVis = v; S.beamPreview = false; }});
       ui.toggle(g6, {label: 'Preview beam when off', value: false, onChange: (v) => { S.beamPreview = v; }});
