@@ -45,12 +45,24 @@ export function buildLinacPanels(stage, lin, ui) {
       ui.note(g2, 'The yellow/black ring on the floor marks the couch-swing safety zone.');
       const g3 = ui.group(p, 'Field shaping (at isocentre)');
       const apply = () => { ap.clamp(); ap.version++; };
-      const fw = ui.slider(g3, {label: 'Field width X', min: 1, max: 40, step: 0.5, value: 10, unit: ' cm', onInput: (v) => { const c = (ap.jaw.x1 + ap.jaw.x2) / 2; ap.setRect(v, ap.jaw.y2 - ap.jaw.y1, c, (ap.jaw.y1 + ap.jaw.y2) / 2); refs.fw = v; }});
-      const fl = ui.slider(g3, {label: 'Field length Y', min: 1, max: 40, step: 0.5, value: 10, unit: ' cm', onInput: (v) => { const c = (ap.jaw.y1 + ap.jaw.y2) / 2; ap.setRect(ap.jaw.x2 - ap.jaw.x1, v, (ap.jaw.x1 + ap.jaw.x2) / 2, c); refs.fl = v; }});
+      refs.jawMode = 'sym';
+      const symSet = (w, l) => { ap.setJaws(-w / 2, w / 2, -l / 2, l / 2); };
+      const fw = ui.slider(g3, {label: 'Field width X (symmetric)', min: 1, max: 40, step: 0.5, value: 10, unit: ' cm', onInput: (v) => { symSet(v, ap.jaw.y2 - ap.jaw.y1); refs.fw = v; }});
+      const fl = ui.slider(g3, {label: 'Field length Y (symmetric)', min: 1, max: 40, step: 0.5, value: 10, unit: ' cm', onInput: (v) => { symSet(ap.jaw.x2 - ap.jaw.x1, v); refs.fl = v; }});
       refs.fwS = fw; refs.flS = fl;
-      ui.segmented(g3, {label: 'MLC shape', options: [['rect', 'Open'], ['circle', 'Circle'], ['ellipse', 'Ellipse'], ['lshape', 'L'], ['blob', 'Blob']], value: 'rect', onChange: (v) => { ap.shape(v); const st = ap.stats(); fw.set(st.fx); fl.set(st.fy); }});
-      ui.button(g3, 'Max field 40 × 40 cm', () => { ap.setRect(40, 40); fw.set(40); fl.set(40); }, 'ghost');
-      ui.note(g3, '60 leaf pairs: 40 × 0.5 cm central, 20 × 1.0 cm outer (projected at isocentre); the MLC and jaws open to a full 40 × 40 cm field. Jaws sit above the MLC and trim the field.');
+      // asymmetric jaws: each of the four jaws moves independently; values are cm from the central axis (X1/Y1 = negative-side jaws, X2/Y2 = positive-side jaws; negative = past the axis)
+      const jaw4 = {};
+      const asymSet = () => { ap.setJaws(-jaw4.x1.get(), jaw4.x2.get(), -jaw4.y1.get(), jaw4.y2.get()); syncJaws(); };
+      for (const [k, lab] of [['x1', 'Jaw X1'], ['x2', 'Jaw X2'], ['y1', 'Jaw Y1'], ['y2', 'Jaw Y2']]) jaw4[k] = ui.slider(g3, {label: lab + ' (cm from axis)', min: -5, max: 20, step: 0.5, value: 5, unit: ' cm', go: true, onInput: () => asymSet()});
+      function syncJaws() { const j = ap.jaw; jaw4.x1.set(-j.x1); jaw4.x2.set(j.x2); jaw4.y1.set(-j.y1); jaw4.y2.set(j.y2); fw.set(Math.min(40, j.x2 - j.x1)); fl.set(Math.min(40, j.y2 - j.y1)); }
+      refs.syncJaws = syncJaws;
+      const showMode = (m) => { refs.jawMode = m; const asym = m === 'asym'; fw.el.style.display = fl.el.style.display = asym ? 'none' : ''; Object.values(jaw4).forEach((sl) => { sl.el.style.display = asym ? '' : 'none'; }); };
+      const jawSeg = ui.segmented(g3, {label: 'Jaws', options: [['sym', 'Symmetric'], ['asym', 'Asymmetric']], value: 'sym', onChange: (m) => { if (m === 'sym') { const j = ap.jaw; symSet(j.x2 - j.x1, j.y2 - j.y1); } showMode(m); syncJaws(); }});
+      { const segEl = g3.lastElementChild; g3.insertBefore(segEl, fw.el); }
+      refs.jawSeg = jawSeg; showMode('sym'); syncJaws();
+      ui.segmented(g3, {label: 'MLC shape', options: [['rect', 'Open'], ['circle', 'Circle'], ['ellipse', 'Ellipse'], ['lshape', 'L'], ['blob', 'Blob']], value: 'rect', onChange: (v) => { ap.shape(v); syncJaws(); }});
+      ui.button(g3, 'Max field 40 × 40 cm', () => { ap.setJaws(-20, 20, -20, 20); syncJaws(); }, 'ghost');
+      ui.note(g3, '60 leaf pairs: 40 × 0.5 cm central, 20 × 1.0 cm outer (projected at isocentre); the MLC and jaws open to a full 40 × 40 cm field. Jaws sit above the MLC and trim the field. Choose Symmetric (both jaws of a pair mirror about the central axis) or Asymmetric (each of X1, X2, Y1, Y2 moves on its own). The jaw positions are also shown on the display in the middle of the gantry ring.');
       const g4 = ui.group(p, 'Beam');
       // FFF is just another beam selection: each of the four choices uses one slot of the 4-position filter carousel
       const eSel = (v) => (S.fff ? 'F' : S.energy);
@@ -69,6 +81,7 @@ export function buildLinacPanels(stage, lin, ui) {
       ui.segmented(g5, {label: 'Motion speed', options: [[1, '1×'], [4, '4×'], [10, '10×']], value: S.timeScale, onChange: (v) => { S.timeScale = +v; }});
       const g6 = ui.group(p, 'Display', false);
       refs.covers = ui.slider(g6, {label: 'Covers (solid ↔ x-ray)', min: 0, max: 1, step: 0.05, value: 1, fmt: (v) => Math.round(v * 100) + '%', onInput: (v) => { S.coverOpacity = v; if (v > 0.3 && S.selected) lin.selectPart(null); }});
+      ui.toggle(g6, {label: 'Gantry display (beam, angles, jaws)', value: true, onChange: (v) => { S.gantryDisplay = v; }});
       ui.toggle(g6, {label: 'Head envelope ring (collision zone)', value: true, onChange: (v) => { S.envelope = v; }});
       ui.toggle(g6, {label: 'Light field', value: true, onChange: (v) => { S.fieldLight = v; }});
       ui.toggle(g6, {label: 'Show radiation beam (teaching aid)', value: true, onChange: (v) => { S.beamVis = v; S.beamPreview = false; }});
@@ -299,6 +312,7 @@ export function buildLinacPanels(stage, lin, ui) {
     hInt.set(S.doorOpen ? 'amber' : 'green', S.doorOpen ? 'Door open' : 'Door closed'); hInt.d.style.display = '';
     if (refs.mu) { refs.mu.set(`${S.delivered.toFixed(0)} / ${S.mu} MU`); refs.rate.set(`${((S.fff ? ENERGIES[S.energy].fffRate : ENERGIES[S.energy].rate)).toFixed(0)} MU/min`); }
     if (!moving && !S.beamOn && S.status !== 'INTERLOCK') S.status = 'READY';
+    if (refs.syncJaws && ap.version !== refs._jv) { refs._jv = ap.version; refs.syncJaws(); }
     tickWF(); if (S.beamOn || moving) refreshPhysics(false);
     if (W.step === 4 && !S.beamOn && S.delivered >= S.mu - 0.01 && refs.next) refs.next.disabled = false;
   });

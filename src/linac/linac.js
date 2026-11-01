@@ -5,6 +5,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {M, skin} from '../engine/materials.js';
 import {Aperture} from './aperture.js';
 import {Head} from './head.js';
+import {createGantryDisplay} from './display.js';
 import {Couch, PH} from './couch.js';
 import {DoseEngine, ENERGIES} from './dose.js';
 import {buildRoom} from './room.js';
@@ -143,6 +144,7 @@ export async function createLinac(stage) {
   for (const m of [...stand.children]) if (m.geometry && m.geometry.type === 'CylinderGeometry') register('04_Circulator', m);
   gantryInner.traverse((m) => { if (m.isMesh && m.geometry.type === 'CylinderGeometry' && m.material === pipeMat) register('06_Waveguide_Split', m); });
 
+  const gdisp = createGantryDisplay({x: 0.975, y: ISO.y}); world.add(gdisp.mesh);
   // ---------- collimation head (jaws + MLC + light field + beam) ----------
   const head = new Head(ap, {isoX: ISO.x, isoY: ISO.y});
   collInner.add(head.group);
@@ -169,7 +171,7 @@ export async function createLinac(stage) {
   const S = {
     timeScale: 4, energy: 6, fff: false, mu: 100, delivered: 0, beamOn: false, doorOpen: true, fieldLight: true, lasers: true,
     beamVis: true, doseView: false, slicePlane: 'axial', coverOpacity: 1, kvOut: 0, kvTarget: 0, mvOut: 0, mvTarget: 0, status: 'READY', alerts: [], dirty: true,
-    interlock: true, envelope: true, hotUntil: 0, clearance: 0.04, selected: null, eAnim: true, cmdLog: [],
+    interlock: true, envelope: true, gantryDisplay: true, hotUntil: 0, clearance: 0.04, selected: null, eAnim: true, cmdLog: [],
   };
 
   // --- collision geometry ---
@@ -274,6 +276,7 @@ export async function createLinac(stage) {
     world.updateMatrixWorld(true);
     const yAxis = new T.Vector3(1, 0, 0).transformDirection(collInner.matrixWorld); // IEC-Y (world +x at coll 0)
     if (hit) S.hotUntil = performance.now() + 1500;
+    gdisp.setVisible(S.gantryDisplay && !stage.renderer.xr.isPresenting); gdisp.update(S, axes, ap, (S.fff ? ENERGIES[S.energy].label + ' FFF' : ENERGIES[S.energy].label));
     head.update(yAxis); head.setEnvelope(S.envelope && !stage.renderer.xr.isPresenting, performance.now() < S.hotUntil);
     head.setBeam({visible: S.beamVis && (S.beamOn || S.beamPreview), intensity: S.beamOn ? 1 : 0.55});
     head.setFieldLight(S.fieldLight && !S.beamOn);

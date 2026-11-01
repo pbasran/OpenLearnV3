@@ -30,6 +30,13 @@ export class Aperture {
     for (let i = 0; i < N_PAIRS; i++) { this.a[i] = this.jaw.x1 - mlcMargin; this.b[i] = this.jaw.x2 + mlcMargin; }
     this.clamp(); this.version++;
   }
+  /** Independent (asymmetric) jaws: x1/y1 are the negative-side jaws, x2/y2 the positive-side jaws (IEC cm at isocentre). MLC parks just outside the jaws. */
+  setJaws(x1, x2, y1, y2, mlcMargin = 0.5) {
+    this.jaw = {x1, x2, y1, y2};
+    this.clamp();
+    for (let i = 0; i < N_PAIRS; i++) { this.a[i] = this.jaw.x1 - mlcMargin; this.b[i] = this.jaw.x2 + mlcMargin; }
+    this.clamp(); this.version++;
+  }
   clamp() {
     const j = this.jaw, [lo, hi] = LIMITS.jawX;
     j.x1 = Math.max(lo, Math.min(j.x1, hi)); j.x2 = Math.max(j.x1 + 0.2, Math.min(j.x2, hi));
