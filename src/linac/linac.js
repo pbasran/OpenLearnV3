@@ -6,6 +6,7 @@ import {M, skin} from '../engine/materials.js';
 import {Aperture} from './aperture.js';
 import {Head} from './head.js';
 import {createGantryDisplay} from './display.js';
+import {f360} from './iec.js';
 import {Couch, PH} from './couch.js';
 import {DoseEngine, ENERGIES} from './dose.js';
 import {buildRoom} from './room.js';
@@ -165,7 +166,7 @@ export async function createLinac(stage) {
   // ---------- state ----------
   const axes = {
     gantry: A(-180, 180, 6), coll: A(-175, 175, 6), couchRot: A(-95, 95, 3),
-    couchLat: A(-0.25, 0.25, 0.03, ' m'), couchLng: A(-0.8, 0.95, 0.04, ' m'), couchVrt: A(FLOOR_Y + 0.35, ISO.y + 0.12, 0.02, ' m'),
+    couchLat: A(-0.25, 0.25, 0.03, ' m'), couchLng: A(-0.95, 0.8, 0.04, ' m'), couchVrt: A(FLOOR_Y + 0.35, ISO.y + 0.12, 0.02, ' m'),
   };
   axes.couchVrt.val = axes.couchVrt.tgt = ISO.y - 0.20;
   const S = {
@@ -218,7 +219,7 @@ export async function createLinac(stage) {
   function applyAxes() {
     gantryPivot.rotation.x = T.MathUtils.degToRad(axes.gantry.val);
     collPivot.rotation.y = T.MathUtils.degToRad(axes.coll.val);
-    couch.state.rot = axes.couchRot.val; couch.state.lat = axes.couchLat.val; couch.state.lng = axes.couchLng.val; couch.state.H = axes.couchVrt.val;
+    couch.state.rot = axes.couchRot.val; couch.state.lat = axes.couchLat.val; couch.state.lng = -axes.couchLng.val;   // IEC: +couchLng = toward the gantry (+Y); the model's couch-top x runs the other way couch.state.H = axes.couchVrt.val;
     couch.apply();
   }
   applyAxes();
@@ -229,14 +230,14 @@ export async function createLinac(stage) {
   const cmdWatch = {t: 0, axes: {}, pend: {}, last: {}};
   const hhmmss = () => new Date().toTimeString().slice(0, 8);
   function logCmd(text, hot) { S.cmdLog.push({t: hhmmss(), text, hot: !!hot}); if (S.cmdLog.length > 60) S.cmdLog.shift(); }
-  const AX_LABEL = {gantry: ['GANTRY', 1, ' deg', 1], coll: ['COLLIMATOR', 1, ' deg', 1], couchRot: ['COUCH ROT', 1, ' deg', 1], couchLat: ['COUCH LAT', 100, ' cm', 1], couchLng: ['COUCH LNG (in+)', -100, ' cm', 1], couchVrt: ['COUCH VRT', 100, ' cm', 1]};
+  const AX_LABEL = {gantry: ['GANTRY', 1, ' deg', 1], coll: ['COLLIMATOR', 1, ' deg', 1], couchRot: ['COUCH ROT', 1, ' deg', 1], couchLat: ['COUCH LAT', 100, ' cm', 1], couchLng: ['COUCH LNG (IEC +Y = in)', 100, ' cm', 1], couchVrt: ['COUCH VRT', 100, ' cm', 1]};
   function watchCmds(dt) {
     cmdWatch.t += dt;
     const debounce = (key, val, fmt) => { const w = cmdWatch.pend[key]; if (cmdWatch.last[key] === undefined) { cmdWatch.last[key] = val; return; }
       if (val === cmdWatch.last[key]) { delete cmdWatch.pend[key]; return; }
       if (!w || w.val !== val) { cmdWatch.pend[key] = {val, t: cmdWatch.t}; return; }
       if (cmdWatch.t - w.t > 0.45) { cmdWatch.last[key] = val; delete cmdWatch.pend[key]; logCmd(fmt(val)); } };
-    for (const [k, a] of Object.entries(axes)) { const [lab, sc, unit, dp] = AX_LABEL[k] || [k, 1, '', 2]; const v = k === 'couchVrt' ? (a.tgt - ISO.y) * 100 : a.tgt * sc; debounce(k, +v.toFixed(dp), (x) => `${lab} -> ${x.toFixed(dp)}${unit}`); }
+    for (const [k, a] of Object.entries(axes)) { const [lab, sc, unit, dp] = AX_LABEL[k] || [k, 1, '', 2]; const v = k === 'couchVrt' ? (a.tgt - ISO.y) * 100 : a.tgt * sc; debounce(k, +v.toFixed(dp), (x) => `${lab} -> ${unit === ' deg' ? f360(x, dp) : x.toFixed(dp)}${unit}`); }
     debounce('energy', S.energy, (x) => `ENERGY ${x} MV`); debounce('fff', S.fff, (x) => (x ? 'FFF ON (filter out of beam)' : 'FFF OFF (flattening filter in)'));
     debounce('mu', S.mu, (x) => `PLAN ${x} MU`); debounce('door', S.doorOpen, (x) => (x ? 'DOOR OPEN' : 'DOOR CLOSED'));
     debounce('kv', S.kvTarget, (x) => (x > 0.5 ? 'kV ARMS EXTEND' : 'kV ARMS RETRACT')); debounce('mv', S.mvTarget, (x) => (x > 0.5 ? 'MV PANEL EXTEND' : 'MV PANEL RETRACT'));

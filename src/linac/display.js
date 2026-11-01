@@ -1,6 +1,7 @@
 // Upright status display mounted on the back plate in the middle of the gantry ring (it stays level while the gantry and collimator rotate).
 // Shows the selected beam, gantry and collimator angles, every jaw position (IEC X1/X2/Y1/Y2, cm from the central axis), and a beam's-eye-view field diagram.
 import * as THREE from 'three';
+import {f360, fs} from './iec.js';
 
 export function createGantryDisplay({x, y, size = 0.52}) {
   const cv = document.createElement('canvas'); cv.width = cv.height = 512; const c = cv.getContext('2d');
@@ -10,7 +11,7 @@ export function createGantryDisplay({x, y, size = 0.52}) {
   let last = '';
   const f1 = (v) => (Math.abs(v) < 0.05 ? 0 : v).toFixed(1);
   function draw(S, axes, ap, label) {
-    const j = ap.jaw, X1 = -j.x1, X2 = j.x2, Y1 = -j.y1, Y2 = j.y2, fw = j.x2 - j.x1, fl = j.y2 - j.y1;
+    const j = ap.jaw, X1 = j.x1, X2 = j.x2, Y1 = j.y1, Y2 = j.y2, fw = j.x2 - j.x1, fl = j.y2 - j.y1;
     const asym = Math.abs(j.x1 + j.x2) > 0.05 || Math.abs(j.y1 + j.y2) > 0.05, on = S.beamOn;
     c.clearRect(0, 0, 512, 512);
     c.fillStyle = 'rgba(8,16,22,0.93)'; c.beginPath(); c.roundRect(6, 6, 500, 500, 44); c.fill();
@@ -23,7 +24,7 @@ export function createGantryDisplay({x, y, size = 0.52}) {
     c.textAlign = 'right'; c.fillStyle = asym ? '#ffc04d' : '#7fb5be'; c.fillText(asym ? 'ASYMMETRIC JAWS' : 'SYMMETRIC JAWS', 478, 100);
     // angles
     c.textAlign = 'left'; c.fillStyle = '#7fb5be'; c.font = '24px sans-serif'; c.fillText('GANTRY', 34, 140); c.fillText('COLL', 282, 140);
-    c.fillStyle = '#ffffff'; c.font = 'bold 46px sans-serif'; c.fillText(`${axes.gantry.val.toFixed(1)}°`, 34, 182); c.fillText(`${axes.coll.val.toFixed(1)}°`, 282, 182);
+    c.fillStyle = '#ffffff'; c.font = 'bold 46px sans-serif'; c.fillText(`${f360(axes.gantry.val)}°`, 34, 182); c.fillText(`${f360(axes.coll.val)}°`, 282, 182);
     // beam's-eye-view diagram (rotates with the collimator; labels follow the jaw edges)
     const cx = 130, cy = 358, k = 4.1;   // px per cm; +-20 cm = +-82 px
     c.save(); c.translate(cx, cy);
@@ -37,12 +38,12 @@ export function createGantryDisplay({x, y, size = 0.52}) {
     lab('X1', j.x1 * k - 16, 0); lab('X2', j.x2 * k + 16, 0); lab('Y1', 0, -j.y1 * k + 16); lab('Y2', 0, -j.y2 * k - 14);
     c.restore();
     // jaw table
-    c.textAlign = 'left'; c.font = '24px sans-serif'; c.fillStyle = '#7fb5be'; c.fillText('JAWS (cm from axis)', 262, 232);
-    const row = (a, va, b, vb, yy) => { c.fillStyle = '#ffd24d'; c.font = 'bold 28px sans-serif'; c.fillText(a, 262, yy); c.fillText(b, 262, yy + 44); c.fillStyle = '#ffffff'; c.textAlign = 'right'; c.fillText(f1(va), 380, yy); c.fillText(f1(vb), 380, yy + 44); c.textAlign = 'left'; };
+    c.textAlign = 'left'; c.font = '24px sans-serif'; c.fillStyle = '#7fb5be'; c.fillText('JAWS (IEC, cm)', 262, 232);
+    const row = (a, va, b, vb, yy) => { c.fillStyle = '#ffd24d'; c.font = 'bold 28px sans-serif'; c.fillText(a, 262, yy); c.fillText(b, 262, yy + 44); c.fillStyle = '#ffffff'; c.textAlign = 'right'; c.fillText(fs(va), 380, yy); c.fillText(fs(vb), 380, yy + 44); c.textAlign = 'left'; };
     row('X1', X1, 'X2', X2, 270); c.fillStyle = '#ffd24d'; c.font = 'bold 28px sans-serif'; c.fillText('Y1', 392, 270); c.fillText('Y2', 392, 314);
-    c.fillStyle = '#ffffff'; c.textAlign = 'right'; c.fillText(f1(Y1), 500, 270); c.fillText(f1(Y2), 500, 314); c.textAlign = 'left';
+    c.fillStyle = '#ffffff'; c.textAlign = 'right'; c.fillText(fs(Y1), 500, 270); c.fillText(fs(Y2), 500, 314); c.textAlign = 'left';
     c.fillStyle = '#7fb5be'; c.font = '24px sans-serif'; c.fillText('FIELD', 262, 392); c.fillStyle = '#ffffff'; c.font = 'bold 36px sans-serif'; c.fillText(`${f1(fw)} × ${f1(fl)} cm`, 262, 430);
-    c.fillStyle = '#4f7d86'; c.font = '19px sans-serif'; c.fillText('X1/Y1 = negative-side jaws', 262, 474);
+    c.fillStyle = '#4f7d86'; c.font = '19px sans-serif'; c.fillText('IEC 61217 · BEV: X right, Y up', 262, 474);
     tex.needsUpdate = true;
   }
   return {

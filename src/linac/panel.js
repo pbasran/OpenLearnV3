@@ -17,6 +17,8 @@ const PLANS = {
     beams: [{g: 0, c: 15, t: 0, shape: 'blob', label: 'AP blob'}, {g: 50, c: 0, t: 0, shape: 'ellipse', label: 'Oblique left'}, {g: -40, c: 345 - 360, t: 20, shape: 'lshape', label: 'Right oblique, couch 20°'}]},
 };
 
+import {f360, fs} from './iec.js';
+
 export function buildLinacPanels(stage, lin, ui) {
   const {S, axes, ap, couch, dose} = lin;
   const refs = {};
@@ -24,7 +26,7 @@ export function buildLinacPanels(stage, lin, ui) {
   const axisSlider = (parent, key, label, opts) => {
     const a = axes[key], sc = (opts.scale || 1) * (opts.invert ? -1 : 1);
     const lo = Math.min(opts.min * sc, opts.max * sc), hi = Math.max(opts.min * sc, opts.max * sc);
-    const s = ui.slider(parent, {label, min: lo, max: hi, step: opts.step, value: a.tgt * sc, unit: opts.unit, fmt: opts.fmt, go: true, onInput: (v) => { a.tgt = v / sc; S.status = 'MOVING'; }});
+    const s = ui.slider(parent, {label, min: lo, max: hi, step: opts.step, value: a.tgt * sc, unit: opts.unit, fmt: opts.fmt, go: true, wrapAt: opts.wrap || 0, onInput: (v) => { a.tgt = v / sc; S.status = 'MOVING'; }});
     sliders[key] = {s, sc, a}; return s;
   };
   const syncSliders = () => { for (const {s, sc, a} of Object.values(sliders)) s.set(a.tgt * sc); };
@@ -32,17 +34,19 @@ export function buildLinacPanels(stage, lin, ui) {
   const tabs = ui.tabs([
     {name: 'Controls', build: (p) => {
       const g1 = ui.group(p, 'Gantry & collimator');
-      axisSlider(g1, 'gantry', 'Gantry angle (IEC)', {min: -180, max: 180, step: 0.5, unit: '°'});
-      const bt = ui.el('div', ''); [0, 90, 180, -90].forEach((v) => ui.button(bt, v + '°', () => { axes.gantry.tgt = v; syncSliders(); }, 'ghost')); g1.append(bt);
-      axisSlider(g1, 'coll', 'Collimator angle', {min: -175, max: 175, step: 0.5, unit: '°'});
+      axisSlider(g1, 'gantry', 'Gantry angle (IEC 0–360°, clockwise)', {min: -180, max: 180, step: 0.5, unit: '°', wrap: 360, fmt: (v) => f360(v)});
+      const bt = ui.el('div', ''); [0, 90, 180, -90].forEach((v) => ui.button(bt, f360(v, 0) + '°', () => { axes.gantry.tgt = v; syncSliders(); }, 'ghost')); g1.append(bt);
+      axisSlider(g1, 'coll', 'Collimator angle (IEC 0–360°, counter-clockwise from source)', {min: -175, max: 175, step: 0.5, unit: '°', wrap: 360, fmt: (v) => f360(v)});
       ui.note(g1, 'Gantry 0° = beam pointing down; 90° = source on the patient’s left. Collimator rotates the field about the beam axis. Motors run at real relative speeds (time-lapse below).');
       const g2 = ui.group(p, 'Couch');
-      axisSlider(g2, 'couchRot', 'Couch rotation', {min: -95, max: 95, step: 0.5, unit: '°'});
-      axisSlider(g2, 'couchLat', 'Lateral', {min: -0.25, max: 0.25, step: 0.001, scale: 100, unit: ' cm', fmt: (v) => v.toFixed(1)});
-      axisSlider(g2, 'couchLng', 'Longitudinal (+ = couch IN toward gantry)', {min: -0.8, max: 0.95, invert: true, step: 0.001, scale: 100, unit: ' cm', fmt: (v) => v.toFixed(1)});
-      axisSlider(g2, 'couchVrt', 'Vertical (couch top vs isocentre)', {min: axes.couchVrt.min, max: axes.couchVrt.max, step: 0.001, scale: 100, unit: ' cm', fmt: (v) => (v - ISO.y * 100).toFixed(1)});
+      axisSlider(g2, 'couchRot', 'Couch rotation (IEC, counter-clockwise from above)', {min: -95, max: 95, step: 0.5, unit: '°', wrap: 360, fmt: (v) => f360(v)});
+      axisSlider(g2, 'couchLat', 'Lateral (IEC +X = right, facing gantry)', {min: -0.25, max: 0.25, step: 0.001, scale: 100, unit: ' cm', fmt: (v) => v.toFixed(1)});
+      axisSlider(g2, 'couchLng', 'Longitudinal (IEC +Y = couch IN toward gantry)', {min: -0.95, max: 0.8, step: 0.001, scale: 100, unit: ' cm', fmt: (v) => v.toFixed(1)});
+      axisSlider(g2, 'couchVrt', 'Vertical (IEC +Z = up; couch top vs isocentre)', {min: axes.couchVrt.min, max: axes.couchVrt.max, step: 0.001, scale: 100, unit: ' cm', fmt: (v) => (v - ISO.y * 100).toFixed(1)});
       refs.lasers = ui.toggle(g2, {label: 'Room lasers ON', value: S.lasers, onChange: (v) => { S.lasers = v; ui.toast(v ? 'Lasers on' : 'Lasers off', 'ok'); }});
       ui.note(g2, 'The yellow/black ring on the floor marks the couch-swing safety zone.');
+      const gI = ui.group(p, 'Coordinate system (IEC 61217)', false);
+      ui.note(gI, '<b>Fixed axes</b> (origin at the isocentre): <b>+Y</b> toward the gantry, <b>+Z</b> up, <b>+X</b> to the right when you face the gantry from the foot of the couch.<br><b>Gantry</b> 0–360°, increasing clockwise seen from the foot of the couch: 0° source above, <b>90° source on the patient’s left</b> (head-first supine), 180° below, <b>270° on the patient’s right</b>.<br><b>Collimator</b> 0–360°, increasing counter-clockwise seen from the source (beam’s-eye view, X right, Y up).<br><b>Couch</b> rotation increases counter-clockwise seen from above; lateral +X, longitudinal +Y (<b>in</b> = toward the gantry), vertical +Z (up).<br><b>Jaws</b> are signed IEC coordinates at the isocentre: X1/Y1 on the negative side, X2/Y2 on the positive side (a symmetric 10 × 10 cm field reads −5 / +5).'); 
       const g3 = ui.group(p, 'Field shaping (at isocentre)');
       const apply = () => { ap.clamp(); ap.version++; };
       refs.jawMode = 'sym';
@@ -50,11 +54,11 @@ export function buildLinacPanels(stage, lin, ui) {
       const fw = ui.slider(g3, {label: 'Field width X (symmetric)', min: 1, max: 40, step: 0.5, value: 10, unit: ' cm', onInput: (v) => { symSet(v, ap.jaw.y2 - ap.jaw.y1); refs.fw = v; }});
       const fl = ui.slider(g3, {label: 'Field length Y (symmetric)', min: 1, max: 40, step: 0.5, value: 10, unit: ' cm', onInput: (v) => { symSet(ap.jaw.x2 - ap.jaw.x1, v); refs.fl = v; }});
       refs.fwS = fw; refs.flS = fl;
-      // asymmetric jaws: each of the four jaws moves independently; values are cm from the central axis (X1/Y1 = negative-side jaws, X2/Y2 = positive-side jaws; negative = past the axis)
+      // asymmetric jaws: each of the four jaws moves independently; IEC 61217 signed coordinates at the isocentre plane (X1/Y1 on the negative side: -5.0 for a symmetric 10 cm field; X2/Y2 on the positive side: +5.0)
       const jaw4 = {};
-      const asymSet = () => { ap.setJaws(-jaw4.x1.get(), jaw4.x2.get(), -jaw4.y1.get(), jaw4.y2.get()); syncJaws(); };
-      for (const [k, lab] of [['x1', 'Jaw X1'], ['x2', 'Jaw X2'], ['y1', 'Jaw Y1'], ['y2', 'Jaw Y2']]) jaw4[k] = ui.slider(g3, {label: lab + ' (cm from axis)', min: -5, max: 20, step: 0.5, value: 5, unit: ' cm', go: true, onInput: () => asymSet()});
-      function syncJaws() { const j = ap.jaw; jaw4.x1.set(-j.x1); jaw4.x2.set(j.x2); jaw4.y1.set(-j.y1); jaw4.y2.set(j.y2); fw.set(Math.min(40, j.x2 - j.x1)); fl.set(Math.min(40, j.y2 - j.y1)); }
+      const asymSet = () => { ap.setJaws(jaw4.x1.get(), jaw4.x2.get(), jaw4.y1.get(), jaw4.y2.get()); syncJaws(); };
+      for (const [k, lab, lo, hi, v0] of [['x1', 'Jaw X1', -20, 5, -5], ['x2', 'Jaw X2', -5, 20, 5], ['y1', 'Jaw Y1', -20, 5, -5], ['y2', 'Jaw Y2', -5, 20, 5]]) jaw4[k] = ui.slider(g3, {label: lab + ' (IEC, cm)', min: lo, max: hi, step: 0.5, value: v0, unit: ' cm', fmt: (v) => fs(v), go: true, onInput: () => asymSet()});
+      function syncJaws() { const j = ap.jaw; jaw4.x1.set(j.x1); jaw4.x2.set(j.x2); jaw4.y1.set(j.y1); jaw4.y2.set(j.y2); fw.set(Math.min(40, j.x2 - j.x1)); fl.set(Math.min(40, j.y2 - j.y1)); }
       refs.syncJaws = syncJaws;
       const showMode = (m) => { refs.jawMode = m; const asym = m === 'asym'; fw.el.style.display = fl.el.style.display = asym ? 'none' : ''; Object.values(jaw4).forEach((sl) => { sl.el.style.display = asym ? '' : 'none'; }); };
       const jawSeg = ui.segmented(g3, {label: 'Jaws', options: [['sym', 'Symmetric'], ['asym', 'Asymmetric']], value: 'sym', onChange: (m) => { if (m === 'sym') { const j = ap.jaw; symSet(j.x2 - j.x1, j.y2 - j.y1); } showMode(m); syncJaws(); }});
@@ -174,7 +178,7 @@ export function buildLinacPanels(stage, lin, ui) {
   const mm = (m) => (m * 1000).toFixed(1);
   function setupError() { const mk = lin.marks(); const i = mk.iso; return {dx: i.x - ISO.x, dy: i.y - ISO.y, dz: i.z - ISO.z, top: mk.top, bb: mk.bb}; }
   function markerErr() { const mk = lin.marks(), b = mk.bb; const dx = b.x - ISO.x, dy = b.y - ISO.y, dz = b.z - ISO.z; return {dx, dy, dz, n: Math.hypot(dx, dy, dz)}; }
-  function applyShift() { const e = markerErr(); axes.couchLng.tgt = Math.min(axes.couchLng.max, Math.max(axes.couchLng.min, axes.couchLng.val + e.dx)); axes.couchVrt.tgt = Math.min(axes.couchVrt.max, Math.max(axes.couchVrt.min, axes.couchVrt.val - e.dy)); axes.couchLat.tgt = Math.min(axes.couchLat.max, Math.max(axes.couchLat.min, axes.couchLat.val + LATSIGN * e.dz)); syncSliders(); }
+  function applyShift() { const e = markerErr(); axes.couchLng.tgt = Math.min(axes.couchLng.max, Math.max(axes.couchLng.min, axes.couchLng.val - e.dx)); axes.couchVrt.tgt = Math.min(axes.couchVrt.max, Math.max(axes.couchVrt.min, axes.couchVrt.val - e.dy)); axes.couchLat.tgt = Math.min(axes.couchLat.max, Math.max(axes.couchLat.min, axes.couchLat.val + LATSIGN * e.dz)); syncSliders(); }
   const LATSIGN = -1;
   function drawImg() {
     if (!imgCanvas) return; const c = imgCanvas.getContext('2d'), w = imgCanvas.width, h = imgCanvas.height; c.fillStyle = '#05080c'; c.fillRect(0, 0, w, h);
@@ -191,7 +195,7 @@ export function buildLinacPanels(stage, lin, ui) {
     } else {
       const ol = ap.outline(), st = ap.stats(); const k = 6;
       panel(0, 'MV portal image (field, 6 px/cm)', () => { body(120, 120); c.fillStyle = 'rgba(255,255,255,0.45)'; if (ol.length) { c.beginPath(); ol.forEach(([x, y], i) => i ? c.lineTo(x * k, -y * k) : c.moveTo(x * k, -y * k)); c.closePath(); c.fill(); } grat(); });
-      panel(w / 2, 'Field size / alignment', () => { c.fillStyle = '#cfe0ee'; c.font = '14px sans-serif'; c.fillText(`Field ${st.fx.toFixed(1)} × ${st.fy.toFixed(1)} cm`, -100, -20); c.fillText(`Equiv. square ${st.eq.toFixed(1)} cm`, -100, 4); c.fillText(`Gantry ${axes.gantry.val.toFixed(1)}°  Coll ${axes.coll.val.toFixed(1)}°`, -100, 28); });
+      panel(w / 2, 'Field size / alignment', () => { c.fillStyle = '#cfe0ee'; c.font = '14px sans-serif'; c.fillText(`Field ${st.fx.toFixed(1)} × ${st.fy.toFixed(1)} cm`, -100, -20); c.fillText(`Equiv. square ${st.eq.toFixed(1)} cm`, -100, 4); c.fillText(`Gantry ${f360(axes.gantry.val)}°  Coll ${f360(axes.coll.val)}°`, -100, 28); });
     }
   }
   function beamTarget() { return PLANS[W.plan].beams[W.beam]; }
@@ -219,7 +223,7 @@ export function buildLinacPanels(stage, lin, ui) {
        const say = (v, neg, pos) => Math.abs(v) < 0.002 ? 'OK ✔' : `move ${(Math.abs(v) * 1000).toFixed(1)} mm ${v > 0 ? pos : neg}`;
        if (refs.setupRO) { const st = (v) => Math.abs(v) < 0.002 ? 'ok' : 'bad';
          refs.setupRO[0].set(say(e.dx, 'IN', 'OUT'), st(e.dx)); refs.setupRO[1].set(say(e.dz, 'toward + on the Lateral slider', 'toward − on the Lateral slider'), st(e.dz)); refs.setupRO[2].set(say(e.dy, 'UP', 'DOWN'), st(e.dy)); }
-       if (refs.setupTgt) { const lng = -(axes.couchLng.val + e.dx) * 100, lat = (axes.couchLat.val + LATSIGN * e.dz) * 100, vrt = (axes.couchVrt.val - e.dy - ISO.y) * 100;
+       if (refs.setupTgt) { const lng = (axes.couchLng.val - e.dx) * 100, lat = (axes.couchLat.val + LATSIGN * e.dz) * 100, vrt = (axes.couchVrt.val - e.dy - ISO.y) * 100;
          refs.setupTgt.innerHTML = `Target slider values → Longitudinal <b>${lng.toFixed(1)}</b> cm · Lateral <b>${lat.toFixed(1)}</b> cm · Vertical <b>${vrt.toFixed(1)}</b> cm`; } }},
     {id: 'img', title: '3 · Image guidance (kV + MV)', body: () => {
       const d = ui.el('div'); ui.note(d, 'The machine has two imagers. <b>kV</b>: orthogonal source/detector arms (AP + lateral) find the internal marker; the couch is shifted to bring it to the isocentre. <b>MV portal imager</b> (EPID): sits opposite the treatment head and images the beam itself, so it checks the field shape and position. Extend, acquire, then apply the shift.');
@@ -234,17 +238,17 @@ export function buildLinacPanels(stage, lin, ui) {
      checks: () => { const e = markerErr(); return [['kV arms extended', S.kvOut > 0.9 || W.kvImaged], ['kV images acquired', W.kvImaged], ['MV portal image acquired', W.mvImaged], [`Marker error ${(e.n * 1000).toFixed(1)} mm → < 1.5 mm after shift`, W.kvImaged && W.kvApplied && e.n < 0.0015]]; }},
     {id: 'beam', title: '4 · Set beam parameters', body: () => {
       const d = ui.el('div'); const b = beamTarget();
-      ui.note(d, `Beam ${W.beam + 1}/${PLANS[W.plan].beams.length}: <b>${b.label}</b> — gantry <b>${b.g}°</b>, collimator <b>${b.c}°</b>, couch <b>${b.t}°</b>, ${b.shape === 'rect' ? `field <b>${b.fw} × ${b.fl} cm</b>` : `MLC shape <b>${b.shape}</b>`}. Set them on the Controls tab, or auto-load as a record-and-verify system would.`);
+      ui.note(d, `Beam ${W.beam + 1}/${PLANS[W.plan].beams.length}: <b>${b.label}</b> — gantry <b>${f360(b.g)}°</b>, collimator <b>${f360(b.c)}°</b>, couch <b>${f360(b.t)}°</b>, ${b.shape === 'rect' ? `field <b>${b.fw} × ${b.fl} cm</b>` : `MLC shape <b>${b.shape}</b>`}. Set them on the Controls tab, or auto-load as a record-and-verify system would.`);
       ui.button(d, 'Auto-load beam (R&V)', () => loadBeam(b), 'ghost'); return d; },
      checks: () => { const b = beamTarget(), st = ap.stats(); const ok = (a, t, tol) => Math.abs(((a - t + 540) % 360) - 180) < tol;
        const field = b.shape === 'rect' ? Math.abs(st.fx - b.fw) < 0.6 && Math.abs(st.fy - b.fl) < 0.6 : true;
-       return [[`Gantry ${axes.gantry.val.toFixed(1)}° → ${b.g}°`, ok(axes.gantry.val, b.g, 1)], [`Collimator ${axes.coll.val.toFixed(1)}° → ${b.c}°`, ok(axes.coll.val, b.c, 1)], [`Couch ${axes.couchRot.val.toFixed(1)}° → ${b.t}°`, ok(axes.couchRot.val, b.t, 1)], ['Field matches plan', field], ['kV arms & MV panel retracted', S.kvOut < 0.1 && S.mvOut < 0.1], ['No collision', !lin.collision()]]; }},
+       return [[`Gantry ${f360(axes.gantry.val)}° → ${f360(b.g)}°`, ok(axes.gantry.val, b.g, 1)], [`Collimator ${f360(axes.coll.val)}° → ${f360(b.c)}°`, ok(axes.coll.val, b.c, 1)], [`Couch ${axes.couchRot.val.toFixed(1)}° → ${b.t}°`, ok(axes.couchRot.val, b.t, 1)], ['Field matches plan', field], ['kV arms & MV panel retracted', S.kvOut < 0.1 && S.mvOut < 0.1], ['No collision', !lin.collision()]]; }},
     {id: 'deliver', title: '5 · Leave room & deliver', body: () => {
       const d = ui.el('div'); ui.note(d, 'Everyone leaves; close the shielding door (the beam-on lamp outside the door lights when radiation is on). Then press BEAM ON.');
       ui.button(d, 'Close door', () => { S.doorOpen = false; refs.door.set(true); lin.room.setDoor(false); }, 'ghost'); ui.button(d, '⚡ BEAM ON', () => beamOn(), 'warn'); return d; },
      checks: () => [['Door closed', !S.doorOpen], [`Delivered ${S.delivered.toFixed(0)} / ${S.mu} MU`, S.delivered >= S.mu - 0.01]]},
-    {id: 'end', title: '6 · Wrap-up', body: () => { const d = ui.el('div'); ui.note(d, 'Retract imagers, lower and withdraw the couch, open the door, and review the log.'); ui.button(d, 'Open door', () => { S.doorOpen = true; refs.door.set(false); lin.room.setDoor(true); }, 'ghost'); ui.button(d, 'Couch out & down', () => { axes.couchLng.tgt = 0.8; axes.couchVrt.tgt = axes.couchVrt.min + 0.1; axes.couchRot.tgt = 0; axes.gantry.tgt = 0; syncSliders(); }, 'ghost'); return d; },
-     checks: () => [['Beam off', !S.beamOn], ['Door open', S.doorOpen], ['Couch withdrawn', axes.couchLng.val > 0.5]]},
+    {id: 'end', title: '6 · Wrap-up', body: () => { const d = ui.el('div'); ui.note(d, 'Retract imagers, lower and withdraw the couch, open the door, and review the log.'); ui.button(d, 'Open door', () => { S.doorOpen = true; refs.door.set(false); lin.room.setDoor(true); }, 'ghost'); ui.button(d, 'Couch out & down', () => { axes.couchLng.tgt = -0.8; axes.couchVrt.tgt = axes.couchVrt.min + 0.1; axes.couchRot.tgt = 0; axes.gantry.tgt = 0; syncSliders(); }, 'ghost'); return d; },
+     checks: () => [['Beam off', !S.beamOn], ['Door open', S.doorOpen], ['Couch withdrawn', axes.couchLng.val < -0.5]]},
   ];
   const THREE_rad = (d) => (d * Math.PI) / 180;
   function buildWorkflow() {
@@ -280,14 +284,14 @@ export function buildLinacPanels(stage, lin, ui) {
     try {
       if (id === 'plan') { W.timeout = true; S.energy = PLANS[W.plan].energy; S.fff = false; refs.energySeg && refs.energySeg.set(S.energy); S.mu = PLANS[W.plan].mu; ap.version++; }
       else if (id === 'setup') { for (let k = 0; k < 3; k++) { const e = setupError(); const cl = (a, v) => Math.min(a.max, Math.max(a.min, v));
-          axes.couchLng.tgt = cl(axes.couchLng, axes.couchLng.val + e.dx); axes.couchVrt.tgt = cl(axes.couchVrt, axes.couchVrt.val - e.dy); axes.couchLat.tgt = cl(axes.couchLat, axes.couchLat.val + LATSIGN * e.dz); syncSliders(); S.status = 'MOVING';
+          axes.couchLng.tgt = cl(axes.couchLng, axes.couchLng.val - e.dx); axes.couchVrt.tgt = cl(axes.couchVrt, axes.couchVrt.val - e.dy); axes.couchLat.tgt = cl(axes.couchLat, axes.couchLat.val + LATSIGN * e.dz); syncSliders(); S.status = 'MOVING';
           await until(() => ['couchLng', 'couchVrt', 'couchLat'].every((k2) => Math.abs(axes[k2].val - axes[k2].tgt) < 1e-4), 15000); const e2 = setupError(); if (Math.max(Math.abs(e2.dx), Math.abs(e2.dy), Math.abs(e2.dz)) < 0.0015) break; } }
       else if (id === 'img') { S.kvTarget = 1; S.mvTarget = 1; refs.kv && refs.kv.set(true); refs.mv && refs.mv.set(true); await until(() => S.kvOut > 0.95 && S.mvOut > 0.95, 15000);
           W.kvImaged = true; W.mvImaged = true; W.shown = 'kv'; applyShift(); W.kvApplied = true; await until(() => markerErr().n < 0.0012, 15000); drawImg(); }
       else if (id === 'beam') { S.kvTarget = 0; S.mvTarget = 0; refs.kv && refs.kv.set(false); refs.mv && refs.mv.set(false); loadBeam(beamTarget()); S.status = 'MOVING'; }
       else if (id === 'deliver') { if (S.doorOpen) { S.doorOpen = false; refs.door && refs.door.set(true); lin.room.setDoor(false); await sleep(600); } if (!S.beamOn && S.delivered < S.mu - 0.01) beamOn(); }
       else if (id === 'end') { S.beamOn = false; S.doorOpen = true; refs.door && refs.door.set(false); lin.room.setDoor(true); S.kvTarget = 0; S.mvTarget = 0; refs.kv && refs.kv.set(false); refs.mv && refs.mv.set(false);
-          axes.couchRot.tgt = 0; axes.gantry.tgt = 0; axes.couchLng.tgt = 0.8; axes.couchVrt.tgt = axes.couchVrt.min + 0.1; syncSliders(); }
+          axes.couchRot.tgt = 0; axes.gantry.tgt = 0; axes.couchLng.tgt = -0.8; axes.couchVrt.tgt = axes.couchVrt.min + 0.1; syncSliders(); }
       const st = STEPS[W.step]; const ok = await until(() => st.checks().every(([, k]) => k), id === 'deliver' ? 120000 : 20000);
       if (ok) advance(); else { renderWF(); ui.toast('Skip could not finish this step automatically (check interlocks / collisions).', 'bad'); }
     } finally { S.timeScale = ts; skipping = false; }
@@ -308,7 +312,7 @@ export function buildLinacPanels(stage, lin, ui) {
     const n = performance.now(); if (n - acc < 120) return; acc = n;
     const bl = Object.entries(axes).filter(([, a]) => a.blocked).map(([k]) => k);
     hBeam.set(S.beamOn ? 'red' : S.status === 'INTERLOCK' ? 'amber' : 'green', S.beamOn ? `BEAM ON  ${S.delivered.toFixed(0)}/${S.mu} MU` : moving ? 'MOVING' : S.status === 'INTERLOCK' ? 'INTERLOCK' : 'READY');
-    hPos.set('', `G ${axes.gantry.val.toFixed(1)}°  C ${axes.coll.val.toFixed(1)}°  T ${axes.couchRot.val.toFixed(1)}°`);
+    hPos.set('', `G ${f360(axes.gantry.val)}°  C ${f360(axes.coll.val)}°  T ${f360(axes.couchRot.val)}°`);
     hInt.set(S.doorOpen ? 'amber' : 'green', S.doorOpen ? 'Door open' : 'Door closed'); hInt.d.style.display = '';
     if (refs.mu) { refs.mu.set(`${S.delivered.toFixed(0)} / ${S.mu} MU`); refs.rate.set(`${((S.fff ? ENERGIES[S.energy].fffRate : ENERGIES[S.energy].rate)).toFixed(0)} MU/min`); }
     if (!moving && !S.beamOn && S.status !== 'INTERLOCK') S.status = 'READY';

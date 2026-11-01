@@ -7,7 +7,7 @@ const T = {pinchOn: 0.28, pinchOff: 0.42, fistFrames: 4, lostMs: 350, dead: 0.01
 
 // Per-mode control chips: [axis key, label, span in axis units covered by sweeping the full width of the preview, unit, invert]
 const CONTROLS = {
-  linac: [['gantry', 'Gantry', 360, '°'], ['coll', 'Collimator', 350, '°'], ['couchVrt', 'Couch height', 0.8, ' m'], ['couchLng', 'Couch in/out', 1.75, ' m', true], ['couchLat', 'Couch lateral', 0.5, ' m'], ['couchRot', 'Couch rotation', 190, '°']],
+  linac: [['gantry', 'Gantry', 360, '°'], ['coll', 'Collimator', 350, '°'], ['couchVrt', 'Couch height', 0.8, ' m'], ['couchLng', 'Couch in/out (IEC +Y = in)', 1.75, ' m'], ['couchLat', 'Couch lateral', 0.5, ' m'], ['couchRot', 'Couch rotation', 190, '°']],
   ct: [['tableIn', 'Table in/out', 1.5, ' m'], ['tableH', 'Table height', 0.68, ' m'], ['tilt', 'Gantry tilt', 60, '°']],
 };
 

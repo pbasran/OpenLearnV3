@@ -1,4 +1,5 @@
 // Treatment-vault shell: floor with couch-swing markings, walls, ceiling lights, door + beam-on lamp, wall laser lines.
+import {f360} from './iec.js';
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {M, tex} from '../engine/materials.js';
@@ -100,7 +101,7 @@ export function buildRoom({iso, floorY, ceilY, rotRadius = 1.75}) {
     const c = cctv.getContext('2d'); c.fillStyle = '#0b1210'; c.fillRect(0, 0, 512, 320); c.strokeStyle = '#2d4a40'; c.lineWidth = 2; c.strokeRect(10, 24, 492, 286);
     c.save(); c.translate(256, 170); const sc = 38;
     c.strokeStyle = '#3d6b5a'; c.setLineDash([6, 5]); c.beginPath(); c.arc(0, 0, 1.75 * sc, 0, 7); c.stroke(); c.setLineDash([]);                                      // couch swing circle
-    c.save(); c.rotate(-(axes.couchRot.val * Math.PI) / 180); c.fillStyle = '#9fb7ae'; c.fillRect((-2.0 - axes.couchLng.val) * sc, -0.27 * sc, 2.1 * sc, 0.54 * sc); c.fillStyle = '#4f7f89'; c.fillRect((-0.15 - axes.couchLng.val) * sc, -0.15 * sc, 0.3 * sc, 0.3 * sc); c.restore();   // couch + phantom
+    c.save(); c.rotate(-(axes.couchRot.val * Math.PI) / 180); c.fillStyle = '#9fb7ae'; c.fillRect((-2.0 + axes.couchLng.val) * sc, -0.27 * sc, 2.1 * sc, 0.54 * sc); c.fillStyle = '#4f7f89'; c.fillRect((-0.15 - axes.couchLng.val) * sc, -0.15 * sc, 0.3 * sc, 0.3 * sc); c.restore();   // couch + phantom
     const ga = (axes.gantry.val * Math.PI) / 180, hz = Math.sin(ga) * 1.0 * sc; c.strokeStyle = S.beamOn ? '#ff5a4a' : '#7fa0b0'; c.lineWidth = 3; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, hz); c.stroke();
     c.fillStyle = '#2a343b'; c.fillRect(-0.36 * sc, hz - 0.31 * sc, 0.72 * sc, 0.62 * sc); c.strokeStyle = '#7fa0b0'; c.lineWidth = 1; c.strokeRect(-0.36 * sc, hz - 0.31 * sc, 0.72 * sc, 0.62 * sc); c.restore();
     c.fillStyle = '#9fe0c0'; c.font = '13px monospace'; c.fillText('CAM 1  VAULT', 18, 18); c.fillStyle = '#ff5a4a'; c.beginPath(); c.arc(480, 14, 5, 0, 7); c.fill(); c.fillStyle = '#9fe0c0'; c.fillText('REC', 436, 18);
@@ -117,7 +118,7 @@ export function buildRoom({iso, floorY, ceilY, rotRadius = 1.75}) {
   const consoleApi = {
     update(S, axes, ENERGY) {
       const sig = [S.cmdLog.length, S.beamOn, S.status, S.delivered.toFixed(0), S.mu, axes.gantry.val.toFixed(0), axes.coll.val.toFixed(0), axes.couchRot.val.toFixed(0), S.energy, S.fff, S.doorOpen].join('|'); if (sig === lastSig) return; lastSig = sig;
-      scrA.draw('TREATMENT CONSOLE', [[`Status  ${S.status}`, S.beamOn ? '#ff7a6a' : '#7be0a0'], [`Energy  ${ENERGY} MV${S.fff ? ' FFF' : ''}`], [`Planned ${S.mu} MU`], [`Delivered ${S.delivered.toFixed(0)} MU`, '#ffe08a'], [`Door    ${S.doorOpen ? 'OPEN - interlock' : 'closed'}`, S.doorOpen ? '#ffb347' : '#7be0a0'], [`Gantry  ${axes.gantry.val.toFixed(1)} deg`], [`Coll    ${axes.coll.val.toFixed(1)} deg`], [`Couch   ${axes.couchRot.val.toFixed(1)} deg`]], S.beamOn);
+      scrA.draw('TREATMENT CONSOLE', [[`Status  ${S.status}`, S.beamOn ? '#ff7a6a' : '#7be0a0'], [`Energy  ${ENERGY} MV${S.fff ? ' FFF' : ''}`], [`Planned ${S.mu} MU`], [`Delivered ${S.delivered.toFixed(0)} MU`, '#ffe08a'], [`Door    ${S.doorOpen ? 'OPEN - interlock' : 'closed'}`, S.doorOpen ? '#ffb347' : '#7be0a0'], [`Gantry  ${f360(axes.gantry.val)} deg`], [`Coll    ${f360(axes.coll.val)} deg`], [`Couch   ${f360(axes.couchRot.val)} deg`]], S.beamOn);
       const lg = S.cmdLog.slice(-8).map((c, k, arr) => [`${c.t.slice(3)} ${c.text}`.slice(0, 40), c.hot ? '#ff9a8a' : (k === arr.length - 1 ? '#ffe08a' : '#bfe6ea')]);
       scrB.draw('COMMAND LOG', lg.length ? lg : [['(no instructions yet)', '#6fa3ad']], S.beamOn);
       drawCctv(S, axes);
